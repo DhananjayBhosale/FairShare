@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { Button } from '../components/ui/Button';
 import { AVATARS } from '../constants';
-import { ChevronRight, Plus, Sparkles, WifiOff, ShieldCheck, Zap } from 'lucide-react';
+import { ChevronRight, Plus, Sparkles, WifiOff, ShieldCheck, Zap, Settings, X } from 'lucide-react';
 
 type Step = 'TRIP_DETAILS' | 'ADD_MEMBERS';
 
@@ -11,6 +11,8 @@ export const TripSetup: React.FC = () => {
   const { startTrip } = useAppStore();
   
   const [step, setStep] = useState<Step>('TRIP_DETAILS');
+  const [showSettings, setShowSettings] = useState(false);
+  
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('₹');
   
@@ -35,6 +37,16 @@ export const TripSetup: React.FC = () => {
       {/* Background blobs */}
       <div className="absolute top-0 left-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 animate-blob" />
       <div className="absolute bottom-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 animate-blob animation-delay-2000" />
+
+      {/* Top Right Settings Button */}
+      <div className="absolute top-6 right-6 z-40">
+        <button 
+          onClick={() => setShowSettings(true)}
+          className="p-3 bg-white/5 hover:bg-white/10 rounded-full backdrop-blur-md border border-white/10 text-slate-400 hover:text-white transition-all shadow-lg active:scale-95"
+        >
+          <Settings size={24} />
+        </button>
+      </div>
 
       <main className="w-full max-w-md relative z-10 flex flex-col flex-1 justify-center">
         <AnimatePresence mode="wait">
@@ -70,25 +82,6 @@ export const TripSetup: React.FC = () => {
                      onChange={(e) => setName(e.target.value)}
                      className="w-full bg-surface/50 border border-white/10 rounded-2xl p-4 text-xl font-bold text-white placeholder:text-slate-600 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
                    />
-                 </div>
-
-                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Currency</label>
-                   <div className="grid grid-cols-4 gap-2">
-                     {['₹', '$', '€', '£'].map((sym) => (
-                       <button
-                         key={sym}
-                         onClick={() => setCurrency(sym)}
-                         className={`py-3 rounded-2xl font-bold text-lg transition-all ${
-                           currency === sym 
-                             ? 'bg-white text-black shadow-lg scale-105' 
-                             : 'bg-surface/50 text-slate-500 hover:bg-surface'
-                         }`}
-                       >
-                         {sym}
-                       </button>
-                     ))}
-                   </div>
                  </div>
 
                  <Button 
@@ -206,6 +199,82 @@ export const TripSetup: React.FC = () => {
           )}
         </AnimatePresence>
       </main>
+
+      {/* Settings Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+            <div 
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+              onClick={() => setShowSettings(false)} 
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="relative w-full max-w-sm bg-[#1A1F2E] border border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Setup Preferences</h2>
+                <button 
+                  onClick={() => setShowSettings(false)} 
+                  className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                >
+                  <X size={20}/>
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-6">
+                
+                {/* Currency Section */}
+                <div className="space-y-3">
+                   <div className="flex items-center justify-between">
+                     <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Default Currency</label>
+                     <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg">{currency}</span>
+                   </div>
+                   <div className="grid grid-cols-4 gap-2">
+                     {['₹', '$', '€', '£'].map((sym) => (
+                       <button
+                         key={sym}
+                         onClick={() => setCurrency(sym)}
+                         className={`h-12 rounded-2xl font-bold text-lg transition-all flex items-center justify-center ${
+                           currency === sym 
+                             ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-105' 
+                             : 'bg-surface/50 text-slate-500 hover:bg-surface hover:text-slate-300'
+                         }`}
+                       >
+                         {sym}
+                       </button>
+                     ))}
+                   </div>
+                </div>
+
+                <div className="h-px bg-white/5 w-full" />
+
+                {/* More placeholder settings for future extensibility */}
+                 <div className="space-y-3 opacity-50 pointer-events-none">
+                   <div className="flex items-center justify-between">
+                     <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Appearance</label>
+                   </div>
+                   <div className="flex gap-2">
+                      <div className="flex-1 h-10 bg-surface/30 rounded-xl flex items-center justify-center text-xs text-slate-500 border border-white/5">Auto</div>
+                      <div className="flex-1 h-10 bg-surface/30 rounded-xl flex items-center justify-center text-xs text-slate-500 border border-white/5">Dark</div>
+                   </div>
+                </div>
+
+              </div>
+
+              <div className="mt-8">
+                 <Button fullWidth onClick={() => setShowSettings(false)}>
+                    Save Changes
+                 </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
