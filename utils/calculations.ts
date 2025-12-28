@@ -1,109 +1,168 @@
 import { Expense, Member, Balance, Settlement, SplitDetail } from '../types';
 
+// ==========================================
+// CORE CALCULATION ENGINE
+// ==========================================
+// This file is the single source of truth for math.
+// It effectively swallows errors and returns safe defaults (0, [], etc)
+// to prevent UI crashes.
+
 /**
- * Calculates the net balance for each member.
- * Positive balance = Member is owed money (Paid more than consumed).
- * Negative balance = Member owes money (Consumed more than paid).
+ * Validates if a number is a valid finite number.
  */
-export const calculateBalances = (members: Member[], expenses: Expense[]): Balance[] => {
-  const balances: Record<string, number> = {};
-
-  // Initialize 0 balance
-  members.forEach(m => {
-    balances[m.id] = 0;
-  });
-
-  expenses.forEach(expense => {
-    // Credit the payer
-    balances[expense.paidBy] = (balances[expense.paidBy] || 0) + expense.amount;
-
-    // Debit the consumers
-    expense.splits.forEach(split => {
-      balances[split.memberId] = (balances[split.memberId] || 0) - split.amount;
-    });
-  });
-
-  return Object.entries(balances).map(([memberId, amount]) => ({
-    memberId,
-    amount,
-  }));
+const isValidNumber = (num: any): boolean => {
+  return typeof num === 'number' && !isNaN(num) && isFinite(num);
 };
 
 /**
- * Generates an efficient list of settlement transactions to clear all debts.
- * Uses a greedy algorithm to match max debtor with max creditor.
+ * Calculates net balances.
+ * Returns safe Balance objects even if input data is corrupt.
  */
-export const calculateSettlements = (balances: Balance[]): Settlement[] => {
-  let debtors = balances.filter(b => b.amount < -1).sort((a, b) => a.amount - b.amount); // Ascending (most negative first)
-  let creditors = balances.filter(b => b.amount > 1).sort((a, b) => b.amount - a.amount); // Descending (most positive first)
+export const calculateBalances = (members: Member[], expenses: Expense[]): Balance[] => {
+  try {
+    const balances: Record<string, number> = {};
 
-  const settlements: Settlement[] = [];
-
-  let dIndex = 0;
-  let cIndex = 0;
-
-  while (dIndex < debtors.length && cIndex < creditors.length) {
-    const debtor = debtors[dIndex];
-    const creditor = creditors[cIndex];
-
-    const amountOwed = Math.abs(debtor.amount);
-    const amountToReceive = creditor.amount;
-
-    const settlementAmount = Math.min(amountOwed, amountToReceive);
-
-    // Record settlement
-    if (settlementAmount > 0) {
-      settlements.push({
-        from: debtor.memberId,
-        to: creditor.memberId,
-        amount: settlementAmount,
+    // 1. Initialize all members with 0
+    // Safe-guard: handle null/undefined members array
+    if (Array.isArray(members)) {
+      members.forEach(m => {
+        if (m?.id) balances[m.id] = 0;
       });
     }
 
-    // Update remaining balances
-    debtor.amount += settlementAmount;
-    creditor.amount -= settlementAmount;
+    // 2. Process expenses
+    if (Array.isArray(expenses)) {
+      expenses.forEach(expense => {
+        // Skip invalid expenses
+        if (!expense) return;
 
-    // Move indices if settled (allow small epsilon for int rounding safety, though int should be exact)
-    if (Math.abs(debtor.amount) < 1) dIndex++;
-    if (creditor.amount < 1) cIndex++;
+        if (!isValidNumber(expense.amount)) {
+            console.warn(`Skipping expense ${expense.id}: Invalid amount`, expense.amount);
+            return;
+        }
+
+        const amount = Math.round(expense.amount); // Force integer
+        const payerId = expense.paidBy;
+
+        // Credit Payer
+        if (payerId && balances.hasOwnProperty(payerId)) {
+          balances[payerId] = (balances[payerId] || 0) + amount;
+        } else if (payerId) {
+            console.warn(`Payer ${payerId} not found in member list. Balance ignored.`);
+        }
+
+        // Debit Split Members
+        if (Array.isArray(expense.splits)) {
+          expense.splits.forEach(split => {
+            if (split?.memberId && isValidNumber(split.amount)) {
+              if (balances.hasOwnProperty(split.memberId)) {
+                balances[split.memberId] = (balances[split.memberId] || 0) - Math.round(split.amount);
+              } else {
+                 console.warn(`Split member ${split.memberId} not found. Ignored.`);
+              }
+            }
+          });
+        }
+      });
+    }
+
+    // 3. Convert to array
+    return Object.entries(balances).map(([memberId, amount]) => ({
+      memberId,
+      amount,
+    }));
+
+  } catch (error) {
+    console.error("CRITICAL: Error in calculateBalances", error);
+    // Return empty array (safe fallback) or just 0 balances for known members
+    return (members || []).map(m => ({ memberId: m.id, amount: 0 }));
   }
-
-  return settlements;
 };
 
 /**
- * Helper to calculate total spent by a member
- */
-export const calculateTotalPaid = (memberId: string, expenses: Expense[]): number => {
-  return expenses
-    .filter(e => e.paidBy === memberId)
-    .reduce((sum, e) => sum + e.amount, 0);
-};
-
-/**
- * Helper to calculate total share/consumed by a member
- */
-export const calculateTotalShare = (memberId: string, expenses: Expense[]): number => {
-  return expenses.reduce((sum, e) => {
-    const mySplit = e.splits.find(s => s.memberId === memberId);
-    return sum + (mySplit ? mySplit.amount : 0);
-  }, 0);
-};
-
-/**
- * Distributes an amount equally among selected member IDs.
- * Handles remainder distribution to ensure sum matches exactly.
+ * Distributes amount equally.
+ * Ensures total split sum exactly equals totalAmount (distributes remainder).
  */
 export const distributeEqually = (totalAmount: number, memberIds: string[]): SplitDetail[] => {
-  if (memberIds.length === 0) return [];
-  
-  const count = memberIds.length;
-  const baseAmount = Math.floor(totalAmount / count);
-  const remainder = totalAmount % count;
+  try {
+    if (!isValidNumber(totalAmount) || totalAmount <= 0) return [];
+    if (!Array.isArray(memberIds) || memberIds.length === 0) return [];
 
-  return memberIds.map((id, index) => ({
-    memberId: id,
-    amount: baseAmount + (index < remainder ? 1 : 0), // Distribute pennies to first few
-  }));
+    const amount = Math.floor(totalAmount); // Ensure integer input
+    const count = memberIds.length;
+    
+    // Basic division
+    const baseShare = Math.floor(amount / count);
+    const remainder = amount % count;
+
+    // Distribute
+    return memberIds.map((id, index) => {
+      // Give remainder pennies to the first few people
+      const share = baseShare + (index < remainder ? 1 : 0);
+      return {
+        memberId: id,
+        amount: share
+      };
+    });
+  } catch (error) {
+    console.error("Error in distributeEqually", error);
+    return [];
+  }
+};
+
+/**
+ * Calculates settlements to clear debts.
+ */
+export const calculateSettlements = (balances: Balance[]): Settlement[] => {
+  try {
+    if (!Array.isArray(balances) || balances.length === 0) return [];
+
+    // Separate into debtors (-) and creditors (+)
+    // Filter out negligible amounts (< 1 minor unit)
+    const debtors = balances
+      .filter(b => b.amount <= -1)
+      .sort((a, b) => a.amount - b.amount); // Ascending (most negative first)
+
+    const creditors = balances
+      .filter(b => b.amount >= 1)
+      .sort((a, b) => b.amount - a.amount); // Descending (most positive first)
+
+    const settlements: Settlement[] = [];
+    
+    let d = 0;
+    let c = 0;
+
+    // Greedy algorithm
+    while (d < debtors.length && c < creditors.length) {
+      const debtor = debtors[d];
+      const creditor = creditors[c];
+
+      const amountOwed = Math.abs(debtor.amount);
+      const amountReceivable = creditor.amount;
+      
+      const settleAmount = Math.min(amountOwed, amountReceivable);
+
+      if (settleAmount > 0) {
+        settlements.push({
+          from: debtor.memberId,
+          to: creditor.memberId,
+          amount: settleAmount
+        });
+      }
+
+      // Adjust temp balances
+      debtor.amount += settleAmount;
+      creditor.amount -= settleAmount;
+
+      // Move pointers if settled
+      if (Math.abs(debtor.amount) < 1) d++;
+      if (creditor.amount < 1) c++;
+    }
+
+    return settlements;
+
+  } catch (error) {
+    console.error("Error in calculateSettlements", error);
+    return [];
+  }
 };

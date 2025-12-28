@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { calculateBalances } from '../utils/calculations';
 import { formatCurrency } from '../utils/format';
 import { MemberAvatar } from '../components/MemberAvatar';
-import { Button } from '../components/ui/Button';
-import { Sparkles, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 const FUN_EMPTY_MESSAGES = [
-  "Someone has to spend money first 😅",
   "This trip is free… for now 💸",
-  "Go on, add the first expense 😏",
+  "Go on, start the money rolling 😏",
   "No bills yet. Enjoy it while it lasts.",
   "Your wallet is safe... for the moment 🛡️"
 ];
@@ -29,57 +27,73 @@ export const Dashboard: React.FC = () => {
   const sortedBalances = balances.sort((a, b) => b.amount - a.amount);
   const getMember = (id: string) => members.find(m => m.id === id);
 
-  // EMPTY STATE: If no expenses, show the fun welcome screen instead of boring dashboard
+  // EMPTY STATE
   if (expenses.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-8 px-4">
-        <motion.div
-           initial={{ scale: 0, rotate: -10 }}
-           animate={{ scale: 1, rotate: 0 }}
-           transition={{ type: "spring", bounce: 0.6 }}
-           className="relative"
-        >
-          <div className="absolute inset-0 bg-primary/30 blur-2xl rounded-full" />
-          <div className="text-8xl relative z-10 drop-shadow-2xl">👀</div>
-        </motion.div>
+      <div className="flex flex-col h-full pt-6 pb-20 px-4">
+        <div className="flex justify-center mb-8">
+            <div className="px-4 py-1.5 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
+                <span className="font-bold text-slate-300 uppercase tracking-widest text-xs">{trip?.name}</span>
+            </div>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center space-y-10">
+            <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", bounce: 0.5 }}
+            className="relative"
+            >
+                <div className="absolute inset-0 bg-primary/30 blur-3xl rounded-full" />
+                <div className="text-8xl relative z-10 drop-shadow-2xl">💸</div>
+            </motion.div>
+
+            <div className="text-center space-y-3">
+                <h2 className="text-3xl font-black text-white leading-tight">Add your first transaction</h2>
+                <p className="text-slate-400 font-medium">{emptyMessage}</p>
+            </div>
+
+            <div className="space-y-3 w-full flex flex-col items-center">
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-widest">The Squad</span>
+                <div className="flex flex-wrap justify-center gap-3">
+                    {members.map((m, i) => (
+                        <motion.div 
+                            key={m.id}
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.3 + (i * 0.1) }}
+                        >
+                            <MemberAvatar member={m} size="md" />
+                        </motion.div>
+                    ))}
+                </div>
+            </div>
+        </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-3"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="w-full max-w-xs mx-auto mt-8"
         >
-          <h2 className="text-3xl font-black text-white">Nothing here yet</h2>
-          <p className="text-slate-300 text-lg font-medium max-w-[250px] mx-auto leading-relaxed">
-            {emptyMessage}
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.4 }}
-          className="space-y-4 w-full max-w-xs"
-        >
-          <button
-             onClick={openExpenseModal}
-             className="w-full bg-white text-black font-bold text-lg py-4 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 hover:shadow-[0_0_50px_rgba(255,255,255,0.5)] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 animate-pulse-slow"
-          >
-             <Plus strokeWidth={3} size={20} />
-             Add First Expense
-          </button>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">
-            It takes 2 seconds, promise.
-          </p>
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    openExpenseModal();
+                }}
+                className="w-full bg-white text-black font-bold text-lg py-4 rounded-full shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+            >
+                <Plus strokeWidth={3} size={20} />
+                Add Expense
+            </button>
         </motion.div>
       </div>
     );
   }
 
-  // REGULAR DASHBOARD (When data exists)
+  // REGULAR DASHBOARD
   return (
     <div className="space-y-10 pt-6">
-      
       {/* Hero Header */}
       <header className="relative">
         <motion.div 
@@ -98,7 +112,7 @@ export const Dashboard: React.FC = () => {
         </motion.div>
       </header>
 
-      {/* Balance Cards - Horizontal Scroll */}
+      {/* Balance Cards */}
       <section>
          <div className="flex items-end justify-between px-2 mb-4">
              <h2 className="text-lg font-bold text-white">Balances</h2>
@@ -175,11 +189,11 @@ export const Dashboard: React.FC = () => {
                     className="p-4 rounded-2xl flex items-center justify-between bg-white/5 border border-white/5 active:scale-98 transition-transform"
                 >
                     <div className="flex items-center gap-4">
-                    <MemberAvatar member={payer!} size="sm" />
+                    <MemberAvatar member={payer} size="sm" />
                     <div>
                         <div className="font-bold text-white">{expense.title}</div>
                         <div className="text-xs text-slate-400 flex items-center gap-1">
-                            <span className="font-bold" style={{ color: payer?.color }}>{payer?.name}</span>
+                            <span className="font-bold" style={{ color: payer?.color || '#94a3b8' }}>{payer?.name || 'Unknown'}</span>
                             <span>paid for everyone</span>
                         </div>
                     </div>

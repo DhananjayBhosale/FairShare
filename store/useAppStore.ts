@@ -23,32 +23,33 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
   closeExpenseModal: () => set({ isExpenseModalOpen: false }),
 
   startTrip: async (name: string, currency: string, initialMembers: { name: string, avatar: string, color: string }[]) => {
-    const newTrip: Trip = {
-      id: generateId(),
-      name,
-      currencySymbol: currency,
-      createdAt: Date.now(),
-      lastOpenedAt: Date.now(),
-    };
+    try {
+        const newTrip: Trip = {
+            id: generateId(),
+            name,
+            currencySymbol: currency,
+            createdAt: Date.now(),
+            lastOpenedAt: Date.now(),
+        };
 
-    // Convert simple member objects to full Member entities
-    // Assign colors from constants if not provided or just cycle through them
-    const members: Member[] = initialMembers.map((m, index) => ({
-      id: generateId(),
-      name: m.name,
-      avatar: m.avatar,
-      color: MEMBER_COLORS[index % MEMBER_COLORS.length],
-    }));
+        const members: Member[] = initialMembers.map((m, index) => ({
+            id: generateId(),
+            name: m.name,
+            avatar: m.avatar,
+            color: MEMBER_COLORS[index % MEMBER_COLORS.length],
+        }));
 
-    await saveToDB('trip', newTrip);
-    await saveToDB('members', members);
+        await saveToDB('trip', newTrip);
+        await saveToDB('members', members);
 
-    set({ trip: newTrip, members: members, expenses: [], isLoading: false });
+        set({ trip: newTrip, members: members, expenses: [], isLoading: false });
+    } catch (e) {
+        console.error("Failed to start trip", e);
+    }
   },
 
-  // Legacy createTrip kept for compatibility
   createTrip: async (name, currency) => { 
-    console.warn("Legacy createTrip called. Use startTrip instead.");
+    console.warn("Legacy createTrip called.");
   },
 
   loadTrip: async () => {
@@ -56,12 +57,19 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
     try {
       const data = await loadAllFromDB();
       if (data.trip) {
-        set({ trip: data.trip, members: data.members, expenses: data.expenses });
+        console.log("Loaded trip from DB:", data.trip.name);
+        // Ensure arrays are arrays to prevent crashes
+        set({ 
+            trip: data.trip, 
+            members: Array.isArray(data.members) ? data.members : [], 
+            expenses: Array.isArray(data.expenses) ? data.expenses : [] 
+        });
       } else {
-        set({ trip: null });
+        set({ trip: null, members: [], expenses: [] });
       }
     } catch (e) {
       console.error("Failed to load DB", e);
+      set({ trip: null, members: [], expenses: [] });
     } finally {
       set({ isLoading: false });
     }
@@ -69,15 +77,17 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
 
   addMember: (name: string) => {
     const { members } = get();
+    const safeMembers = Array.isArray(members) ? members : [];
+    
     const newMember: Member = {
       id: generateId(),
       name,
-      color: MEMBER_COLORS[members.length % MEMBER_COLORS.length],
-      avatar: AVATARS[members.length % AVATARS.length],
+      color: MEMBER_COLORS[safeMembers.length % MEMBER_COLORS.length],
+      avatar: AVATARS[safeMembers.length % AVATARS.length],
     };
     
     saveToDB('members', newMember);
-    set({ members: [...members, newMember] });
+    set({ members: [...safeMembers, newMember] });
   },
 
   updateMember: (id, name, color) => {
@@ -101,21 +111,44 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
   },
 
   addExpense: (expenseData) => {
-    const { expenses } = get();
-    const newExpense: Expense = {
-      ...expenseData,
-      id: generateId(),
-      date: Date.now(),
-    };
-
-    saveToDB('expenses', newExpense);
-    set({ expenses: [newExpense, ...expenses] });
+    try {
+        const { expenses } = get();
+        const safeExpenses = Array.isArray(expenses) ? expenses : [];
+    
+        console.log('Adding Expense [Start]', expenseData);
+        
+        const newExpense: Expense = {
+          ...expenseData,
+          id: generateId(),
+          date: Date.now(),
+        };
+    
+        // 1. Optimistic Update (Immutable)
+        const updatedExpenses = [newExpense, ...safeExpenses];
+        set({ expenses: updatedExpenses });
+        
+        console.log('Adding Expense [State Updated]', { count: updatedExpenses.length });
+        
+        // 2. Async Persist
+        saveToDB('expenses', newExpense).then(() => {
+            console.log('Adding Expense [DB Saved]');
+        }).catch(err => {
+            console.error("Failed to save expense to DB", err);
+            // In a real app, we might trigger a toast or rollback here
+        });
+    } catch (err) {
+        console.error("CRITICAL: Error in addExpense action", err);
+    }
   },
 
   deleteExpense: async (id) => {
     const { expenses } = get();
+    const safeExpenses = Array.isArray(expenses) ? expenses : [];
+    
+    const updatedExpenses = safeExpenses.filter(e => e.id !== id);
+    set({ expenses: updatedExpenses });
+    
     await deleteFromDB('expenses', id);
-    set({ expenses: expenses.filter(e => e.id !== id) });
   },
 
   resetTrip: async () => {

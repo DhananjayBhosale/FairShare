@@ -3,7 +3,7 @@ import { Member } from '../types';
 import { motion } from 'framer-motion';
 
 interface MemberAvatarProps {
-  member: Member;
+  member?: Member; // Made optional to prevent crashes
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showName?: boolean;
   className?: string;
@@ -21,6 +21,17 @@ export const MemberAvatar: React.FC<MemberAvatarProps> = ({
     lg: 'w-16 h-16 text-3xl',
     xl: 'w-24 h-24 text-5xl',
   };
+
+  // Fallback if member is missing
+  if (!member) {
+    return (
+        <div className={`flex flex-col items-center gap-2 ${className}`}>
+            <div className={`${sizeClasses[size]} rounded-full flex items-center justify-center bg-slate-800 text-slate-500 border border-slate-700 select-none`}>
+                ?
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>

@@ -1,20 +1,21 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, HTMLMotionProps } from 'framer-motion';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends HTMLMotionProps<"button"> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({ 
+// Wrapped in forwardRef to handle Framer Motion's internal ref passing requirements
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ 
   children, 
   variant = 'primary', 
   size = 'md', 
   fullWidth = false,
   className = '',
   ...props 
-}) => {
+}, ref) => {
   
   const variants = {
     primary: "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25 border border-transparent",
@@ -31,6 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <motion.button
+      ref={ref}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.96 }}
       className={`
@@ -43,4 +45,6 @@ export const Button: React.FC<ButtonProps> = ({
       {children}
     </motion.button>
   );
-};
+});
+
+Button.displayName = 'Button';

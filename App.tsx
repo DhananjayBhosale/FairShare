@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { TripSetup } from './views/TripSetup';
 import { Dashboard } from './views/Dashboard';
@@ -15,13 +15,15 @@ const App: React.FC = () => {
   const { trip, isLoading, loadTrip, isExpenseModalOpen, openExpenseModal, closeExpenseModal } = useAppStore();
 
   useEffect(() => {
+    // Single source of truth loading.
+    // This runs exactly once on mount.
     loadTrip();
   }, [loadTrip]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#0B0E14] text-white">
+        <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -31,51 +33,54 @@ const App: React.FC = () => {
   }
 
   return (
-    <BrowserRouter>
-      {/* Background is handled in index.html, we just need transparency here */}
-      <div className="min-h-screen text-slate-100 font-sans flex justify-center selection:bg-primary/30">
+    <HashRouter>
+      {/* 
+        Main Container 
+        Centered on desktop, full width on mobile.
+      */}
+      <div className="min-h-screen font-sans flex justify-center selection:bg-primary/30 relative">
         
-        <main className="w-full max-w-md h-full min-h-screen relative shadow-2xl overflow-hidden bg-transparent">
+        {/* APP FRAME */}
+        <main className="w-full max-w-md h-[100dvh] relative shadow-2xl bg-transparent flex flex-col overflow-hidden">
            
-           {/* Top Content Area */}
-           <div className="p-6 h-full min-h-screen overflow-y-auto custom-scrollbar relative z-10 pb-32">
-              <Routes>
-                <Route path="/" element={<Navigate to="/trip" replace />} />
-                <Route path="/trip" element={<Dashboard />} />
-                <Route path="/expenses" element={<ExpensesList />} />
-                <Route path="/settle" element={<Settlements />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
+           {/* SCROLLABLE CONTENT AREA */}
+           <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10 pb-32">
+              <div className="p-6">
+                <Routes>
+                  {/* Default Redirect */}
+                  <Route path="/" element={<Navigate to="/trip" replace />} />
+                  
+                  {/* Main Routes */}
+                  <Route path="/trip" element={<Dashboard />} />
+                  <Route path="/expenses" element={<ExpensesList />} />
+                  <Route path="/settle" element={<Settlements />} />
+                  <Route path="/settings" element={<Settings />} />
+
+                  {/* Catch-all */}
+                  <Route path="*" element={<Navigate to="/trip" replace />} />
+                </Routes>
+              </div>
            </div>
 
-           {/* Floating Add Button */}
-           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+           {/* FAB (Floating Action Button) */}
+           <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
               <motion.button 
                 initial={{ scale: 0 }}
-                animate={{ 
-                    scale: [1, 1.05, 1],
-                    boxShadow: ["0px 0px 20px rgba(139, 92, 246, 0.3)", "0px 0px 40px rgba(139, 92, 246, 0.6)", "0px 0px 20px rgba(139, 92, 246, 0.3)"]
-                }}
-                transition={{ 
-                    duration: 2, 
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
+                animate={{ scale: 1 }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={openExpenseModal}
-                className="pointer-events-auto bg-white text-black rounded-full p-5 flex items-center justify-center border-4 border-[#0F172A]"
+                className="pointer-events-auto bg-white text-black rounded-full p-5 flex items-center justify-center border-4 border-[#0F172A] shadow-2xl shadow-primary/40"
               >
                 <Plus size={32} strokeWidth={3} />
               </motion.button>
            </div>
 
-           {/* Bottom Navigation */}
-           <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
-             {/* Glass background for nav */}
-              <div className="absolute inset-0 bg-[#0F172A]/80 backdrop-blur-xl border-t border-white/5" />
+           {/* NAV BAR */}
+           <nav className="absolute bottom-0 left-0 right-0 z-20 pb-safe">
+              <div className="absolute inset-0 bg-[#0F172A]/90 backdrop-blur-xl border-t border-white/5" />
               
-              <div className="max-w-md mx-auto flex justify-around items-center h-20 px-2 relative z-10">
+              <div className="flex justify-around items-center h-20 px-2 relative z-10">
                 {NAV_ITEMS.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -84,7 +89,7 @@ const App: React.FC = () => {
                       to={`/${item.id}`}
                       className={({ isActive }) =>
                         `flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all w-16 relative ${
-                          isActive ? 'text-white' : 'text-slate-600 hover:text-slate-400'
+                          isActive ? 'text-white' : 'text-slate-600'
                         }`
                       }
                     >
@@ -105,20 +110,27 @@ const App: React.FC = () => {
                 })}
               </div>
            </nav>
-
-           {/* Modals */}
-           <AnimatePresence>
-             {isExpenseModalOpen && (
-               <AddExpenseModal 
-                  isOpen={isExpenseModalOpen} 
-                  onClose={closeExpenseModal} 
-               />
-             )}
-           </AnimatePresence>
-
         </main>
+
+        {/* 
+            MODAL LAYER 
+            Placed OUTSIDE the 'main' overflow-hidden container to ensure z-index correctness.
+        */}
+        <AnimatePresence>
+            {isExpenseModalOpen && (
+                <div className="fixed inset-0 z-50 flex justify-center pointer-events-none">
+                    <div className="w-full max-w-md relative h-full pointer-events-auto">
+                        <AddExpenseModal 
+                            isOpen={isExpenseModalOpen} 
+                            onClose={closeExpenseModal} 
+                        />
+                    </div>
+                </div>
+            )}
+        </AnimatePresence>
+
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
