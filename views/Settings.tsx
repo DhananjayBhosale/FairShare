@@ -1,15 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { Button } from '../components/ui/Button';
-import { LogOut, Trash2, Edit } from 'lucide-react';
+import { LogOut, Trash2, Edit, UserPlus, Plus } from 'lucide-react';
 import { MemberAvatar } from '../components/MemberAvatar';
+import { X } from 'lucide-react';
 
 export const Settings: React.FC = () => {
-  const { trip, members, resetTrip, removeMember } = useAppStore();
+  const { trip, members, resetTrip, removeMember, addMember } = useAppStore();
+  const [newMemberName, setNewMemberName] = useState('');
 
   const handleEndTrip = async () => {
     if (confirm("Are you sure you want to delete this trip?")) {
       await resetTrip();
+    }
+  };
+
+  const handleAddMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newMemberName.trim()) {
+        addMember(newMemberName.trim());
+        setNewMemberName('');
     }
   };
 
@@ -28,9 +38,13 @@ export const Settings: React.FC = () => {
         </div>
       </section>
 
-      {/* Member List (Read Only-ish) */}
+      {/* Member List */}
       <section className="space-y-4">
-         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest px-2">People</h2>
+         <div className="flex items-center justify-between px-2">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">People</h2>
+            <span className="text-xs font-medium text-slate-600">{members.length} members</span>
+         </div>
+         
          <div className="grid grid-cols-1 gap-3">
              {members.map(member => (
                  <div key={member.id} className="glass-card p-3 rounded-2xl flex items-center justify-between">
@@ -47,6 +61,25 @@ export const Settings: React.FC = () => {
                  </div>
              ))}
          </div>
+
+         {/* Add New Member Input */}
+         <form onSubmit={handleAddMember} className="glass-card p-2 pl-4 rounded-2xl flex items-center gap-3 border border-dashed border-white/20 mt-4">
+            <UserPlus size={18} className="text-slate-500" />
+            <input 
+                type="text" 
+                placeholder="Add new person..." 
+                value={newMemberName}
+                onChange={(e) => setNewMemberName(e.target.value)}
+                className="flex-1 bg-transparent text-sm font-bold text-white placeholder:text-slate-600 focus:outline-none py-2"
+            />
+            <button 
+                type="submit"
+                disabled={!newMemberName.trim()}
+                className="p-2 bg-primary/20 text-primary rounded-xl disabled:opacity-50 disabled:bg-slate-800 disabled:text-slate-600"
+            >
+                <Plus size={18} />
+            </button>
+         </form>
       </section>
 
       {/* Danger Zone */}
@@ -59,6 +92,3 @@ export const Settings: React.FC = () => {
     </div>
   );
 };
-
-// Simple Icon helper for this file
-import { X } from 'lucide-react';

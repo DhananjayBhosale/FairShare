@@ -88,7 +88,7 @@ const App: React.FC = () => {
                       key={item.id}
                       to={`/${item.id}`}
                       className={({ isActive }) =>
-                        `flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all w-16 relative ${
+                        `flex flex-col items-center justify-center gap-1 p-2 rounded-2xl transition-all w-20 relative ${
                           isActive ? 'text-white' : 'text-slate-600'
                         }`
                       }
@@ -103,6 +103,7 @@ const App: React.FC = () => {
                                 />
                             )}
                             <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
+                            <span className="text-[10px] font-bold relative z-10">{item.label}</span>
                           </>
                       )}
                     </NavLink>
