@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
-import { calculateBalances } from '../utils/calculations';
+import { calculateBalances, calculateSettlements } from '../utils/calculations';
 import { formatCurrency } from '../utils/format';
 import { MemberAvatar } from '../components/MemberAvatar';
-import { Plus } from 'lucide-react';
+import { Plus, ArrowRight, Check } from 'lucide-react';
 
 const FUN_EMPTY_MESSAGES = [
   "This trip is free… for now 💸",
@@ -15,7 +15,10 @@ const FUN_EMPTY_MESSAGES = [
 
 export const Dashboard: React.FC = () => {
   const { members, expenses, trip, openExpenseModal } = useAppStore();
+  
+  // Calculations
   const balances = calculateBalances(members, expenses);
+  const settlements = calculateSettlements(balances);
   const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
   
   const [emptyMessage, setEmptyMessage] = useState(FUN_EMPTY_MESSAGES[0]);
@@ -24,7 +27,6 @@ export const Dashboard: React.FC = () => {
     setEmptyMessage(FUN_EMPTY_MESSAGES[Math.floor(Math.random() * FUN_EMPTY_MESSAGES.length)]);
   }, []);
 
-  const sortedBalances = balances.sort((a, b) => b.amount - a.amount);
   const getMember = (id: string) => members.find(m => m.id === id);
 
   // EMPTY STATE
@@ -112,66 +114,80 @@ export const Dashboard: React.FC = () => {
         </motion.div>
       </header>
 
-      {/* Balance Cards */}
+      {/* Settle Up Section (Replaces Balances) */}
       <section>
          <div className="flex items-end justify-between px-2 mb-4">
-             <h2 className="text-lg font-bold text-white">Balances</h2>
-             <span className="text-xs font-medium text-slate-500">{members.length} people</span>
+             <h2 className="text-lg font-bold text-white">Settle Up</h2>
          </div>
          
-         <div className="flex gap-4 overflow-x-auto pb-8 -mx-6 px-6 no-scrollbar snap-x">
-            {sortedBalances.map((balance, i) => {
-               const member = getMember(balance.memberId);
-               if (!member) return null;
-               
-               const isPositive = balance.amount >= 0;
-               const isSettled = Math.abs(balance.amount) < 1;
+         {settlements.length === 0 ? (
+             <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card rounded-3xl p-8 flex flex-col items-center justify-center text-center space-y-3"
+             >
+                 <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-1 ring-4 ring-emerald-500/10">
+                    <Check strokeWidth={4} size={24} />
+                 </div>
+                 <div>
+                    <div className="text-white font-bold text-lg">All settled up!</div>
+                    <div className="text-slate-400 text-sm">No pending debts between anyone.</div>
+                 </div>
+             </motion.div>
+         ) : (
+            <div className="space-y-3">
+                {settlements.map((settlement, i) => {
+                    const from = getMember(settlement.from);
+                    const to = getMember(settlement.to);
+                    if (!from || !to) return null;
 
-               return (
-                 <motion.div 
-                   key={balance.memberId}
-                   initial={{ opacity: 0, scale: 0.9 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   transition={{ delay: i * 0.1, type: "spring" }}
-                   className="snap-center min-w-[180px] h-[220px] relative group"
-                 >
-                   <div 
-                        className="absolute inset-0 bg-white/5 backdrop-blur-xl rounded-[2rem] border transition-all duration-300"
-                        style={{ borderColor: isSettled ? '#334155' : member.color }}
-                   />
-                   
-                   <div 
-                        className="absolute inset-0 opacity-20 rounded-[2rem] blur-xl transition-all"
-                        style={{ backgroundColor: isSettled ? 'transparent' : member.color }}
-                   />
+                    return (
+                        <motion.div
+                            key={`${settlement.from}-${settlement.to}`}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                            className="glass-card p-4 rounded-3xl flex items-center justify-between border border-white/5 relative overflow-hidden"
+                        >
+                            {/* Gradient Background based on payer color */}
+                            <div 
+                                className="absolute left-0 top-0 bottom-0 w-1 opacity-50"
+                                style={{ backgroundColor: from.color }}
+                            />
 
-                   <div className="relative z-10 flex flex-col h-full p-5 justify-between">
-                     <div className="flex justify-between items-start">
-                         <MemberAvatar member={member} size="md" />
-                         {isSettled && <div className="bg-white/10 rounded-full px-2 py-1 text-[10px] font-bold">SETTLED</div>}
-                     </div>
+                            {/* Payer */}
+                            <div className="flex flex-col items-center gap-1 z-10 w-16">
+                                <MemberAvatar member={from} size="md" />
+                                <span className="text-[10px] font-bold text-slate-400 truncate max-w-full">{from.name}</span>
+                            </div>
 
-                     <div>
-                        <div className="font-bold text-white text-lg leading-tight mb-1">{member.name}</div>
-                        
-                        {isSettled ? (
-                            <div className="text-slate-500 font-medium">All good</div>
-                        ) : (
-                            <>
-                                <div className={`text-xs font-bold uppercase tracking-wider mb-1 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                                    {isPositive ? 'Gets Back' : 'Owes'}
+                            {/* Action Arrow & Amount */}
+                            <div className="flex-1 flex flex-col items-center justify-center z-10 px-2">
+                                <div className="text-xl font-black text-white tracking-tight mb-1">
+                                    {formatCurrency(settlement.amount, trip?.currencySymbol)}
                                 </div>
-                                <div className="text-2xl font-black text-white tracking-tight">
-                                    {formatCurrency(Math.abs(balance.amount), trip?.currencySymbol)}
+                                <div className="flex items-center gap-2 text-slate-500 w-full justify-center">
+                                    <div className="h-[2px] w-full bg-white/10 rounded-full overflow-hidden relative">
+                                        <motion.div 
+                                            className="absolute inset-0 bg-white/30"
+                                            animate={{ x: ['-100%', '100%'] }}
+                                            transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                                        />
+                                    </div>
+                                    <ArrowRight size={14} className="shrink-0" />
                                 </div>
-                            </>
-                        )}
-                     </div>
-                   </div>
-                 </motion.div>
-               )
-            })}
-         </div>
+                            </div>
+
+                            {/* Receiver */}
+                            <div className="flex flex-col items-center gap-1 z-10 w-16">
+                                <MemberAvatar member={to} size="md" />
+                                <span className="text-[10px] font-bold text-slate-400 truncate max-w-full">{to.name}</span>
+                            </div>
+                        </motion.div>
+                    );
+                })}
+            </div>
+         )}
       </section>
 
       {/* Recent Activity */}
