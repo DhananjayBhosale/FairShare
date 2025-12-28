@@ -38,6 +38,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({
       className={`
         relative overflow-hidden font-bold rounded-full tracking-wide transition-all
         disabled:opacity-50 disabled:pointer-events-none disabled:grayscale
+        flex items-center justify-center
         ${variants[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}
       `}
       {...props}

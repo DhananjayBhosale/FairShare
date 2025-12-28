@@ -46,7 +46,7 @@ export const TripSetup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#0B0E14]">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Dynamic Background */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[100px] animate-blob" />

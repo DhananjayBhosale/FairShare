@@ -22,7 +22,7 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0B0E14] text-white">
+      <div className="min-h-screen flex items-center justify-center text-white">
         <div className="animate-spin w-10 h-10 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
