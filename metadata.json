@@ -1,0 +1,5 @@
+{
+  "name": "FairShare",
+  "description": "A modern, offline-first expense splitting app for trips and groups. No login required.",
+  "requestFramePermissions": []
+}

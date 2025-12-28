@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- SEO & Metadata -->
+    <title>FairShare – Offline Expense Splitting Made Fun</title>
+    <meta name="description" content="FairShare is a fun, offline-first expense splitting app for trips and friends. Track who paid, split expenses visually, and see who owes whom – no login, no internet required.">
+    <meta name="keywords" content="expense split, trip expenses, offline expense tracker, split bills, group expenses, travel budget">
+    <meta name="author" content="FairShare">
+    <meta name="theme-color" content="#8B5CF6">
+
+    <!-- Open Graph / Facebook / WhatsApp -->
+    <meta property="og:title" content="FairShare – Offline Expense Splitting Made Fun">
+    <meta property="og:description" content="Split trip expenses visually and offline. No login. No internet. Just FairShare.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://fairshare.pages.dev">
+    <meta property="og:image" content="https://fairshare.pages.dev/og-image.png">
+    <meta property="og:site_name" content="FairShare">
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="FairShare – Offline Expense Splitting Made Fun">
+    <meta name="twitter:description" content="A modern, offline expense-splitting app for trips and friends.">
+    <meta name="twitter:image" content="https://fairshare.pages.dev/og-image.png">
+
+    <!-- Icons & PWA -->
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            },
+            colors: {
+              background: '#0B0E14', // Deeper, richer black/blue
+              surface: '#151923', // Slightly lighter for cards
+              primary: '#8B5CF6', // Violet 500
+              secondary: '#10B981', // Emerald 500
+              accent: '#F43F5E', // Rose 500
+            },
+            animation: {
+              'blob': 'blob 7s infinite',
+            },
+            keyframes: {
+              blob: {
+                '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              }
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background-color: #0B0E14;
+        color: #F8FAFC;
+        -webkit-tap-highlight-color: transparent;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        overflow-x: hidden;
+      }
+      
+      .bg-gradient-mesh {
+        background: radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                    radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.15) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: -1;
+      }
+
+      ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+      }
+      
+      .glass-card {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.11.0",
+    "zustand": "https://esm.sh/zustand@^5.0.9"
+  }
+}
+</script>
+</head>
+  <body>
+    <div class="bg-gradient-mesh"></div>
+    <div id="root"></div>
+  </body>
+</html>
