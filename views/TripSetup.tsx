@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { Button } from '../components/ui/Button';
 import { AVATARS } from '../constants';
-import { ChevronRight, Plus, Sparkles, WifiOff, ShieldCheck, Zap, Settings, X } from 'lucide-react';
+import { ChevronRight, Plus, Sparkles, Settings, X, ArrowRight } from 'lucide-react';
+import { MemberAvatar } from '../components/MemberAvatar';
 
 type Step = 'TRIP_DETAILS' | 'ADD_MEMBERS';
 
@@ -16,15 +17,27 @@ export const TripSetup: React.FC = () => {
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('₹');
   
-  const [members, setMembers] = useState<{name: string, avatar: string}[]>([]);
+  // No default members - we build the squad from scratch
+  const [members, setMembers] = useState<{name: string, avatar: string, color: string}[]>([]);
   const [tempName, setTempName] = useState('');
-  const [tempAvatar, setTempAvatar] = useState(AVATARS[0]);
+  
+  // Cycle random avatar for the input
+  const [nextAvatarIndex, setNextAvatarIndex] = useState(0);
 
   const handleAddMember = () => {
     if (!tempName.trim()) return;
-    setMembers([...members, { name: tempName.trim(), avatar: tempAvatar }]);
+    
+    // Assign a temporary color for preview (actual color assigned in store)
+    const tempColor = '#fff'; 
+
+    setMembers([...members, { 
+        name: tempName.trim(), 
+        avatar: AVATARS[nextAvatarIndex % AVATARS.length],
+        color: tempColor 
+    }]);
+    
     setTempName('');
-    setTempAvatar(AVATARS[(members.length + 1) % AVATARS.length]);
+    setNextAvatarIndex(prev => prev + 1);
   };
 
   const handleFinish = () => {
@@ -33,12 +46,14 @@ export const TripSetup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute top-0 left-0 w-64 h-64 bg-primary/20 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2 animate-blob" />
-      <div className="absolute bottom-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-3xl translate-y-1/2 translate-x-1/2 animate-blob animation-delay-2000" />
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#0B0E14]">
+      {/* Dynamic Background */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[100px] animate-blob" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/20 rounded-full blur-[100px] animate-blob animation-delay-2000" />
+      </div>
 
-      {/* Top Right Settings Button */}
+      {/* Settings Toggle */}
       <div className="absolute top-6 right-6 z-40">
         <button 
           onClick={() => setShowSettings(true)}
@@ -50,226 +65,180 @@ export const TripSetup: React.FC = () => {
 
       <main className="w-full max-w-md relative z-10 flex flex-col flex-1 justify-center">
         <AnimatePresence mode="wait">
+          
+          {/* STEP 1: NAMING */}
           {step === 'TRIP_DETAILS' && (
             <motion.div
               key="details"
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              className="space-y-8"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, x: -50, scale: 0.95 }}
+              className="flex flex-col items-center text-center space-y-10"
             >
-               <header className="text-center space-y-2">
-                 <motion.div 
-                   initial={{ scale: 0 }} animate={{ scale: 1 }}
-                   className="w-20 h-20 bg-gradient-to-tr from-primary to-accent rounded-3xl mx-auto flex items-center justify-center shadow-xl shadow-primary/30 mb-6"
-                 >
-                   <Sparkles className="text-white w-10 h-10" />
-                 </motion.div>
-                 <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
-                   FairShare
+               <motion.div 
+                 initial={{ y: 20, opacity: 0 }}
+                 animate={{ y: 0, opacity: 1 }}
+                 transition={{ delay: 0.2 }}
+                 className="relative"
+               >
+                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
+                 <Sparkles className="relative text-white w-16 h-16" strokeWidth={1.5} />
+               </motion.div>
+
+               <div className="space-y-4 w-full">
+                 <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 leading-tight">
+                   Let's plan a<br/>new adventure.
                  </h1>
-                 <p className="text-slate-400 font-medium text-lg">The fun way to split bills.</p>
-               </header>
-
-               <div className="glass-card p-6 rounded-3xl space-y-6">
-                 <div className="space-y-2">
-                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider ml-1">Trip Name</label>
-                   <input
-                     type="text"
-                     placeholder="e.g. Goa Roadtrip"
-                     value={name}
-                     autoFocus
-                     onChange={(e) => setName(e.target.value)}
-                     className="w-full bg-surface/50 border border-white/10 rounded-2xl p-4 text-xl font-bold text-white placeholder:text-slate-600 focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-                   />
+                 
+                 <div className="relative group">
+                    <input
+                        type="text"
+                        placeholder="Trip Name..."
+                        value={name}
+                        autoFocus
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full bg-transparent border-b-2 border-white/20 py-4 text-center text-3xl font-bold text-white placeholder:text-slate-700 focus:border-primary focus:outline-none transition-all"
+                    />
+                    <div className="absolute bottom-0 left-0 h-0.5 bg-primary w-0 group-focus-within:w-full transition-all duration-500" />
                  </div>
-
-                 <Button 
-                    fullWidth 
-                    size="lg" 
-                    onClick={() => setStep('ADD_MEMBERS')} 
-                    disabled={!name.trim()}
-                    className="mt-4"
-                  >
-                    Next Step <ChevronRight size={18} className="ml-2 inline" />
-                  </Button>
                </div>
 
-               {/* SEO Content Section */}
-               <section className="mt-8 pt-8 border-t border-white/5 space-y-4">
-                  <div className="grid grid-cols-1 gap-4 text-slate-400 text-sm">
-                    <div className="flex items-start gap-3">
-                      <WifiOff className="text-primary mt-1" size={20} />
-                      <div>
-                        <h2 className="text-white font-bold mb-0.5">Offline First</h2>
-                        <p>Works completely without internet. Perfect for remote trips and flights.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <ShieldCheck className="text-secondary mt-1" size={20} />
-                      <div>
-                        <h2 className="text-white font-bold mb-0.5">Private & Secure</h2>
-                        <p>No login required. Your data stays on your device and is never sent to a server.</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Zap className="text-accent mt-1" size={20} />
-                      <div>
-                        <h2 className="text-white font-bold mb-0.5">Visual Splitting</h2>
-                        <p>See who owes whom instantly with beautiful, interactive visualizations.</p>
-                      </div>
-                    </div>
-                  </div>
-               </section>
+               <Button 
+                  size="lg" 
+                  onClick={() => setStep('ADD_MEMBERS')} 
+                  disabled={!name.trim()}
+                  className="rounded-full px-10 h-16 text-lg shadow-xl shadow-primary/20"
+                >
+                  Start Building Squad <ArrowRight className="ml-2" />
+                </Button>
             </motion.div>
           )}
 
+          {/* STEP 2: SQUAD */}
           {step === 'ADD_MEMBERS' && (
             <motion.div
               key="members"
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              className="space-y-6"
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col h-full max-h-[80vh]"
             >
-               <div className="text-center">
-                 <h2 className="text-3xl font-bold text-white mb-2">Who's Going?</h2>
-                 <p className="text-slate-400">Add everyone joining the trip.</p>
+               <div className="text-center mb-8">
+                 <h2 className="text-3xl font-extrabold text-white mb-2">Who's going?</h2>
+                 <p className="text-slate-400 font-medium">Add your friends (and yourself!)</p>
                </div>
 
-               {/* Member List Animation */}
-               <div className="flex flex-wrap gap-3 justify-center min-h-[60px]">
-                 <AnimatePresence>
-                   {members.map((m, i) => (
-                     <motion.div
-                       key={i}
-                       initial={{ scale: 0, opacity: 0 }}
-                       animate={{ scale: 1, opacity: 1 }}
-                       exit={{ scale: 0, opacity: 0 }}
-                       className="glass-card pl-2 pr-4 py-1.5 rounded-full flex items-center gap-2 border-white/20"
-                     >
-                       <span className="text-xl">{m.avatar}</span>
-                       <span className="font-bold text-white">{m.name}</span>
-                     </motion.div>
-                   ))}
-                 </AnimatePresence>
+               {/* Dynamic Grid of Members */}
+               <div className="flex-1 overflow-y-auto min-h-[200px] content-start p-4">
+                 <div className="flex flex-wrap gap-4 justify-center">
+                    <AnimatePresence mode="popLayout">
+                        {members.map((m, i) => (
+                            <motion.div
+                            key={`${m.name}-${i}`}
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0 }}
+                            layout
+                            className="flex flex-col items-center gap-2"
+                            >
+                                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-3xl shadow-lg backdrop-blur-sm">
+                                    {m.avatar}
+                                </div>
+                                <span className="font-bold text-sm text-white">{m.name}</span>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                    
+                    {/* Ghost Chip for Empty State */}
+                    {members.length === 0 && (
+                        <div className="w-full h-32 flex items-center justify-center border-2 border-dashed border-white/10 rounded-3xl text-slate-600">
+                            Add the first person 👇
+                        </div>
+                    )}
+                 </div>
                </div>
 
-               {/* Add Form */}
-               <div className="glass-card p-4 rounded-3xl space-y-4">
-                 <div className="flex gap-2">
-                    <button 
-                      onClick={() => setTempAvatar(AVATARS[(AVATARS.indexOf(tempAvatar) + 1) % AVATARS.length])}
-                      className="w-14 h-14 bg-surface rounded-2xl flex items-center justify-center text-2xl hover:bg-surface/80 active:scale-95 transition-all"
-                    >
-                      {tempAvatar}
-                    </button>
+               {/* Input Area */}
+               <div className="mt-auto space-y-4 pt-6">
+                 <div className="glass-card p-2 pl-6 rounded-full flex items-center gap-4 border border-white/20 shadow-2xl">
                     <input
                       type="text"
-                      placeholder="Name"
+                      placeholder="Name..."
                       value={tempName}
                       onChange={(e) => setTempName(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddMember()}
-                      className="flex-1 bg-background border border-white/10 rounded-2xl px-4 text-lg font-bold text-white focus:ring-2 focus:ring-primary focus:outline-none"
+                      className="flex-1 bg-transparent text-lg font-bold text-white placeholder:text-slate-600 focus:outline-none"
                     />
                     <button 
                       onClick={handleAddMember}
                       disabled={!tempName.trim()}
-                      className="w-14 h-14 bg-primary text-white rounded-2xl flex items-center justify-center disabled:opacity-50 hover:bg-primary/90 active:scale-95 transition-all"
+                      className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center disabled:opacity-50 disabled:scale-90 hover:scale-110 active:scale-90 transition-all"
                     >
-                      <Plus size={24} />
+                      <Plus size={24} strokeWidth={3} />
                     </button>
                  </div>
-               </div>
 
-               <div className="flex gap-3 pt-4">
-                  <Button variant="ghost" onClick={() => setStep('TRIP_DETAILS')}>
-                    Back
-                  </Button>
-                  <Button 
-                    fullWidth 
-                    size="lg" 
-                    onClick={handleFinish} 
-                    disabled={members.length === 0}
-                  >
-                    Start Adventure 🚀
-                  </Button>
+                 <div className="flex gap-4">
+                    <Button variant="ghost" className="flex-1" onClick={() => setStep('TRIP_DETAILS')}>
+                        Back
+                    </Button>
+                    <Button 
+                        className="flex-[2]" 
+                        onClick={handleFinish}
+                        disabled={members.length < 1} // Allow single player for testing
+                    >
+                        Let's Go! 🚀
+                    </Button>
+                 </div>
                </div>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* Settings Modal */}
+      {/* Settings Modal - Redesigned */}
       <AnimatePresence>
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-            <div 
-              className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-md" 
               onClick={() => setShowSettings(false)} 
             />
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="relative w-full max-w-sm bg-[#1A1F2E] border border-white/10 rounded-3xl p-6 shadow-2xl overflow-hidden"
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-sm bg-[#1A1F2E] border border-white/10 rounded-[2rem] p-8 shadow-2xl"
             >
-              {/* Header */}
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-white">Setup Preferences</h2>
-                <button 
-                  onClick={() => setShowSettings(false)} 
-                  className="p-2 bg-white/5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                >
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="text-2xl font-bold text-white">Preferences</h2>
+                <button onClick={() => setShowSettings(false)} className="p-2 bg-white/5 rounded-full text-slate-400">
                   <X size={20}/>
                 </button>
               </div>
 
-              {/* Content */}
-              <div className="space-y-6">
-                
-                {/* Currency Section */}
-                <div className="space-y-3">
-                   <div className="flex items-center justify-between">
-                     <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">Default Currency</label>
-                     <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg">{currency}</span>
-                   </div>
-                   <div className="grid grid-cols-4 gap-2">
-                     {['₹', '$', '€', '£'].map((sym) => (
-                       <button
-                         key={sym}
-                         onClick={() => setCurrency(sym)}
-                         className={`h-12 rounded-2xl font-bold text-lg transition-all flex items-center justify-center ${
-                           currency === sym 
-                             ? 'bg-primary text-white shadow-lg shadow-primary/25 scale-105' 
-                             : 'bg-surface/50 text-slate-500 hover:bg-surface hover:text-slate-300'
-                         }`}
-                       >
-                         {sym}
-                       </button>
-                     ))}
-                   </div>
-                </div>
-
-                <div className="h-px bg-white/5 w-full" />
-
-                {/* More placeholder settings for future extensibility */}
-                 <div className="space-y-3 opacity-50 pointer-events-none">
-                   <div className="flex items-center justify-between">
-                     <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Appearance</label>
-                   </div>
-                   <div className="flex gap-2">
-                      <div className="flex-1 h-10 bg-surface/30 rounded-xl flex items-center justify-center text-xs text-slate-500 border border-white/5">Auto</div>
-                      <div className="flex-1 h-10 bg-surface/30 rounded-xl flex items-center justify-center text-xs text-slate-500 border border-white/5">Dark</div>
-                   </div>
-                </div>
-
-              </div>
+               <div className="space-y-4">
+                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Currency</label>
+                 <div className="grid grid-cols-4 gap-3">
+                   {['₹', '$', '€', '£'].map((sym) => (
+                     <button
+                       key={sym}
+                       onClick={() => setCurrency(sym)}
+                       className={`h-14 rounded-2xl font-bold text-xl transition-all flex items-center justify-center ${
+                         currency === sym 
+                           ? 'bg-white text-black scale-105 shadow-lg shadow-white/20' 
+                           : 'bg-white/5 text-slate-500 hover:bg-white/10'
+                       }`}
+                     >
+                       {sym}
+                     </button>
+                   ))}
+                 </div>
+               </div>
 
               <div className="mt-8">
-                 <Button fullWidth onClick={() => setShowSettings(false)}>
-                    Save Changes
-                 </Button>
+                 <Button fullWidth onClick={() => setShowSettings(false)}>Done</Button>
               </div>
             </motion.div>
           </div>

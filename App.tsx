@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { useAppStore } from './store/useAppStore';
 import { TripSetup } from './views/TripSetup';
@@ -12,8 +12,7 @@ import { AddExpenseModal } from './components/AddExpenseModal';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const App: React.FC = () => {
-  const { trip, isLoading, loadTrip } = useAppStore();
-  const [isExpenseModalOpen, setExpenseModalOpen] = useState(false);
+  const { trip, isLoading, loadTrip, isExpenseModalOpen, openExpenseModal, closeExpenseModal } = useAppStore();
 
   useEffect(() => {
     loadTrip();
@@ -22,7 +21,7 @@ const App: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse w-16 h-16 rounded-full bg-primary/50 blur-xl"></div>
+        <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -33,12 +32,13 @@ const App: React.FC = () => {
 
   return (
     <BrowserRouter>
+      {/* Background is handled in index.html, we just need transparency here */}
       <div className="min-h-screen text-slate-100 font-sans flex justify-center selection:bg-primary/30">
         
-        <main className="w-full max-w-md h-full min-h-screen relative backdrop-blur-sm sm:border-x sm:border-white/5 shadow-2xl">
+        <main className="w-full max-w-md h-full min-h-screen relative shadow-2xl overflow-hidden bg-transparent">
            
            {/* Top Content Area */}
-           <div className="p-6 h-full min-h-screen overflow-y-auto custom-scrollbar relative z-10">
+           <div className="p-6 h-full min-h-screen overflow-y-auto custom-scrollbar relative z-10 pb-32">
               <Routes>
                 <Route path="/" element={<Navigate to="/trip" replace />} />
                 <Route path="/trip" element={<Dashboard />} />
@@ -52,11 +52,19 @@ const App: React.FC = () => {
            <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
               <motion.button 
                 initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
+                animate={{ 
+                    scale: [1, 1.05, 1],
+                    boxShadow: ["0px 0px 20px rgba(139, 92, 246, 0.3)", "0px 0px 40px rgba(139, 92, 246, 0.6)", "0px 0px 20px rgba(139, 92, 246, 0.3)"]
+                }}
+                transition={{ 
+                    duration: 2, 
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setExpenseModalOpen(true)}
-                className="pointer-events-auto bg-gradient-to-tr from-primary to-accent text-white rounded-3xl p-5 shadow-xl shadow-primary/40 flex items-center justify-center"
+                onClick={openExpenseModal}
+                className="pointer-events-auto bg-white text-black rounded-full p-5 flex items-center justify-center border-4 border-[#0F172A]"
               >
                 <Plus size={32} strokeWidth={3} />
               </motion.button>
@@ -65,7 +73,7 @@ const App: React.FC = () => {
            {/* Bottom Navigation */}
            <nav className="fixed bottom-0 left-0 right-0 z-30 pb-safe">
              {/* Glass background for nav */}
-              <div className="absolute inset-0 bg-[#0B0E14]/80 backdrop-blur-xl border-t border-white/5" />
+              <div className="absolute inset-0 bg-[#0F172A]/80 backdrop-blur-xl border-t border-white/5" />
               
               <div className="max-w-md mx-auto flex justify-around items-center h-20 px-2 relative z-10">
                 {NAV_ITEMS.map((item) => {
@@ -75,15 +83,21 @@ const App: React.FC = () => {
                       key={item.id}
                       to={`/${item.id}`}
                       className={({ isActive }) =>
-                        `flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all w-16 ${
-                          isActive ? 'text-primary scale-110' : 'text-slate-500 hover:text-slate-300'
+                        `flex flex-col items-center gap-1.5 p-2 rounded-2xl transition-all w-16 relative ${
+                          isActive ? 'text-white' : 'text-slate-600 hover:text-slate-400'
                         }`
                       }
                     >
                       {({ isActive }) => (
                           <>
-                            <Icon size={24} strokeWidth={isActive ? 3 : 2} />
-                            {isActive && <motion.div layoutId="nav-dot" className="w-1 h-1 bg-primary rounded-full" />}
+                            {isActive && (
+                                <motion.div 
+                                    layoutId="nav-bg"
+                                    className="absolute inset-0 bg-white/5 rounded-2xl"
+                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                />
+                            )}
+                            <Icon size={24} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
                           </>
                       )}
                     </NavLink>
@@ -97,7 +111,7 @@ const App: React.FC = () => {
              {isExpenseModalOpen && (
                <AddExpenseModal 
                   isOpen={isExpenseModalOpen} 
-                  onClose={() => setExpenseModalOpen(false)} 
+                  onClose={closeExpenseModal} 
                />
              )}
            </AnimatePresence>

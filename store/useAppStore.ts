@@ -4,9 +4,12 @@ import { generateId } from '../utils/format';
 import { saveToDB, loadAllFromDB, deleteFromDB, clearStore } from '../services/db';
 import { MEMBER_COLORS, AVATARS } from '../constants';
 
-// Extending AppState to support the new initialization flow
+// Extending AppState to support the new initialization flow and UI state
 interface ExtendedAppState extends AppState {
-  startTrip: (name: string, currency: string, initialMembers: { name: string, avatar: string }[]) => Promise<void>;
+  isExpenseModalOpen: boolean; // UI State
+  openExpenseModal: () => void;
+  closeExpenseModal: () => void;
+  startTrip: (name: string, currency: string, initialMembers: { name: string, avatar: string, color: string }[]) => Promise<void>;
 }
 
 export const useAppStore = create<ExtendedAppState>((set, get) => ({
@@ -14,8 +17,12 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
   members: [],
   expenses: [],
   isLoading: true,
+  isExpenseModalOpen: false,
 
-  startTrip: async (name: string, currency: string, initialMembers: { name: string, avatar: string }[]) => {
+  openExpenseModal: () => set({ isExpenseModalOpen: true }),
+  closeExpenseModal: () => set({ isExpenseModalOpen: false }),
+
+  startTrip: async (name: string, currency: string, initialMembers: { name: string, avatar: string, color: string }[]) => {
     const newTrip: Trip = {
       id: generateId(),
       name,
@@ -25,6 +32,7 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
     };
 
     // Convert simple member objects to full Member entities
+    // Assign colors from constants if not provided or just cycle through them
     const members: Member[] = initialMembers.map((m, index) => ({
       id: generateId(),
       name: m.name,
@@ -38,10 +46,9 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
     set({ trip: newTrip, members: members, expenses: [], isLoading: false });
   },
 
-  // Legacy createTrip kept for compatibility or unused
+  // Legacy createTrip kept for compatibility
   createTrip: async (name, currency) => { 
-    // Fallback implementation using startTrip
-    get().startTrip(name, currency, [{ name: 'You', avatar: '😎' }, { name: 'Friend', avatar: '😊' }]);
+    console.warn("Legacy createTrip called. Use startTrip instead.");
   },
 
   loadTrip: async () => {

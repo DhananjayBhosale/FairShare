@@ -13,19 +13,19 @@ export const ExpensesList: React.FC = () => {
   if (expenses.length === 0) {
     return (
         <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500 space-y-6">
-            <div className="w-24 h-24 bg-surface rounded-full flex items-center justify-center animate-bounce">
-                <span className="text-4xl">💸</span>
+            <div className="text-6xl animate-bounce">
+                😇
             </div>
             <div className="text-center">
-                <h3 className="text-white font-bold text-lg">No expenses yet</h3>
-                <p className="text-sm">Go ahead, buy something nice!</p>
+                <h3 className="text-white font-bold text-xl mb-1">No money drama yet</h3>
+                <p className="text-sm font-medium">Your wallet is safe.</p>
             </div>
         </div>
     );
   }
 
   return (
-    <div className="space-y-6 pb-24 pt-4">
+    <div className="space-y-6 pt-4">
       <h1 className="text-3xl font-extrabold text-white">History</h1>
       
       <div className="space-y-4">
@@ -66,7 +66,7 @@ export const ExpensesList: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Delete Button (Visible on Hover/Focus or swiping on mobile ideally) */}
+                {/* Delete Button */}
                 <button 
                     onClick={() => {
                         if(confirm('Delete this expense?')) deleteExpense(expense.id);
