@@ -5,9 +5,7 @@ import { saveToDB, loadAllFromDB, deleteFromDB, clearStore } from '../services/d
 import { MEMBER_COLORS, AVATARS } from '../constants';
 
 interface ExtendedAppState extends AppState {
-  isExpenseModalOpen: boolean;
-  openExpenseModal: () => void;
-  closeExpenseModal: () => void;
+  // Extended types if needed, but AppState covers it
 }
 
 export const useAppStore = create<ExtendedAppState>((set, get) => ({
@@ -18,10 +16,12 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
   isLoading: true,
   
   isExpenseModalOpen: false,
+  editingExpenseId: null,
   isCreatingTrip: false,
 
   openExpenseModal: () => set({ isExpenseModalOpen: true }),
-  closeExpenseModal: () => set({ isExpenseModalOpen: false }),
+  closeExpenseModal: () => set({ isExpenseModalOpen: false, editingExpenseId: null }),
+  setEditingExpense: (id) => set({ editingExpenseId: id, isExpenseModalOpen: !!id }),
 
   startCreatingTrip: () => set({ isCreatingTrip: true }),
   cancelCreatingTrip: () => set({ isCreatingTrip: false }),
@@ -31,27 +31,14 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
     try {
       const data = await loadAllFromDB();
       
-      // Handle legacy: If data exists but format is old or we need to ensure consistency
-      // In this simple implementation, we assume data loaded is the raw DB dump.
-      
       const allTrips = Array.isArray(data.trip) ? data.trip : (data.trip ? [data.trip] : []);
-      // Note: loadAllFromDB 'trip' might be an array or object depending on previous implementation.
-      // The previous implementation returned tripReq.result[0], implying the DB might store multiple but we only fetched one.
-      // We need to check services/db.ts. loadAllFromDB logic: tripReq.result[0].
-      // To support multiple, we need to fix loadAllFromDB first? 
-      // No, let's fix the logic here assuming we will fix DB service to return all.
-      
-      // Filter helpers
       const allMembers = Array.isArray(data.members) ? data.members : [];
       const allExpenses = Array.isArray(data.expenses) ? data.expenses : [];
 
       if (allTrips.length > 0) {
-          // Sort by lastOpenedAt descending
           const sortedTrips = (allTrips as Trip[]).sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0));
           const activeTrip = sortedTrips[0];
 
-          // Filter data for active trip
-          // Legacy support: if item has no tripId, assign to first trip found
           const activeMembers = allMembers.filter(m => m.tripId === activeTrip.id || !m.tripId);
           const activeExpenses = allExpenses.filter(e => e.tripId === activeTrip.id || !e.tripId);
 
@@ -93,7 +80,6 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
         await saveToDB('trip', newTrip);
         await saveToDB('members', members);
 
-        // Update state: append new trip, set as active
         const { trips } = get();
         set({ 
             trips: [...trips, newTrip], 
@@ -115,12 +101,9 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
       if (targetTrip) {
           set({ isLoading: true });
           
-          // Update lastOpenedAt
           const updatedTrip = { ...targetTrip, lastOpenedAt: Date.now() };
           await saveToDB('trip', updatedTrip);
 
-          // Reload all data to ensure we have fresh filtering
-          // (In a real app we might cache, but here we just re-fetch for simplicity/robustness)
           const data = await loadAllFromDB();
           const allMembers = Array.isArray(data.members) ? data.members : [];
           const allExpenses = Array.isArray(data.expenses) ? data.expenses : [];
@@ -128,7 +111,6 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
           const activeMembers = allMembers.filter(m => m.tripId === tripId);
           const activeExpenses = allExpenses.filter(e => e.tripId === tripId);
           
-          // Update trips list with new timestamp
           const updatedTrips = trips.map(t => t.id === tripId ? updatedTrip : t);
 
           set({
@@ -143,14 +125,9 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
   },
 
   deleteTrip: async (tripId: string) => {
-      const { trips, trip } = get();
-      
-      // 1. Delete from DB
+      const { trips } = get();
       await deleteFromDB('trip', tripId);
       
-      // 2. Delete associated data
-      // For this, we need to load all data and delete matches.
-      // Optimized: just filter current state if it matches, but rigorous way is:
       const data = await loadAllFromDB();
       const membersToDelete = (data.members as Member[]).filter(m => m.tripId === tripId);
       const expensesToDelete = (data.expenses as Expense[]).filter(e => e.tripId === tripId);
@@ -158,15 +135,12 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
       for (const m of membersToDelete) await deleteFromDB('members', m.id);
       for (const e of expensesToDelete) await deleteFromDB('expenses', e.id);
 
-      // 3. Update State
       const remainingTrips = trips.filter(t => t.id !== tripId);
       
       if (remainingTrips.length > 0) {
-          // Switch to first available
-          // (Recursive call might be cleaner but let's just set state manually to avoid loops)
           const nextTrip = remainingTrips[0];
           await get().switchTrip(nextTrip.id);
-          set({ trips: remainingTrips }); // switchTrip updates trips but we need to ensure list is correct
+          set({ trips: remainingTrips });
       } else {
           set({ trips: [], trip: null, members: [], expenses: [] });
       }
@@ -231,6 +205,26 @@ export const useAppStore = create<ExtendedAppState>((set, get) => ({
     } catch (err) {
         console.error("CRITICAL: Error in addExpense action", err);
     }
+  },
+
+  updateExpense: async (id, expenseData) => {
+    const { expenses, trip } = get();
+    if (!trip) return;
+
+    const existingExpense = expenses.find(e => e.id === id);
+    if (!existingExpense) return;
+
+    const updatedExpense: Expense = {
+        ...existingExpense,
+        ...expenseData,
+        tripId: trip.id,
+        id: id,
+    };
+
+    const updatedExpenses = expenses.map(e => e.id === id ? updatedExpense : e);
+    set({ expenses: updatedExpenses });
+    
+    await saveToDB('expenses', updatedExpense);
   },
 
   deleteExpense: async (id) => {

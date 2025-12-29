@@ -14,7 +14,7 @@ const FUN_EMPTY_MESSAGES = [
 ];
 
 export const Dashboard: React.FC = () => {
-  const { members, expenses, trip, openExpenseModal } = useAppStore();
+  const { members, expenses, trip, openExpenseModal, setEditingExpense } = useAppStore();
   
   // Calculations
   const balances = calculateBalances(members, expenses);
@@ -197,12 +197,13 @@ export const Dashboard: React.FC = () => {
             {expenses.slice(0, 5).map((expense, i) => {
             const payer = getMember(expense.paidBy);
             return (
-                <motion.div 
+                <motion.button 
                     key={expense.id}
+                    onClick={() => setEditingExpense(expense.id)}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="p-4 rounded-2xl flex items-center justify-between bg-white/5 border border-white/5 active:scale-98 transition-transform"
+                    className="w-full text-left p-4 rounded-2xl flex items-center justify-between bg-white/5 border border-white/5 active:scale-98 transition-transform hover:bg-white/10"
                 >
                     <div className="flex items-center gap-4">
                     <MemberAvatar member={payer} size="sm" />
@@ -217,7 +218,7 @@ export const Dashboard: React.FC = () => {
                     <div className="font-bold text-white text-lg">
                         {formatCurrency(expense.amount, trip?.currencySymbol)}
                     </div>
-                </motion.div>
+                </motion.button>
             )
             })}
         </div>

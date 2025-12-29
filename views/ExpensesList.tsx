@@ -2,13 +2,17 @@ import React from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { formatCurrency } from '../utils/format';
 import { MemberAvatar } from '../components/MemberAvatar';
-import { Trash2, Plus } from 'lucide-react';
+import { Plus, Pencil } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const ExpensesList: React.FC = () => {
-  const { expenses, members, trip, deleteExpense, openExpenseModal } = useAppStore();
+  const { expenses, members, trip, openExpenseModal, setEditingExpense } = useAppStore();
 
   const getMember = (id: string) => members.find(m => m.id === id);
+
+  const handleEdit = (id: string) => {
+      setEditingExpense(id);
+  };
 
   if (expenses.length === 0) {
     return (
@@ -42,12 +46,13 @@ export const ExpensesList: React.FC = () => {
           const accentColor = payer?.color || '#94a3b8';
           
           return (
-            <motion.div 
+            <motion.button 
                 key={expense.id} 
+                onClick={() => handleEdit(expense.id)}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
-                className="glass-card rounded-3xl p-4 flex items-center gap-4 group relative overflow-hidden"
+                className="w-full text-left glass-card rounded-3xl p-4 flex items-center gap-4 group relative overflow-hidden hover:bg-white/5 transition-colors active:scale-98"
             >
                 {/* Color Strip */}
                 <div 
@@ -75,16 +80,11 @@ export const ExpensesList: React.FC = () => {
                     </div>
                 </div>
                 
-                {/* Delete Button */}
-                <button 
-                    onClick={() => {
-                        if(confirm('Delete this expense?')) deleteExpense(expense.id);
-                    }}
-                    className="absolute right-0 top-0 bottom-0 w-16 bg-red-500/90 text-white flex items-center justify-center translate-x-full group-hover:translate-x-0 transition-transform"
-                >
-                    <Trash2 size={20} />
-                </button>
-            </motion.div>
+                {/* Edit Icon Hint */}
+                <div className="absolute top-4 right-4 text-white/10 group-hover:text-white/30 transition-colors">
+                    <Pencil size={12} />
+                </div>
+            </motion.button>
           );
         })}
       </div>

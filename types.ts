@@ -72,6 +72,15 @@ export interface AppState {
   addMember: (name: string) => void;
   updateMember: (id: string, name: string, color: string) => void;
   removeMember: (id: string) => void;
+  
+  // Expense Management
+  isExpenseModalOpen: boolean;
+  editingExpenseId: string | null; // ID of expense being edited
+  openExpenseModal: () => void;
+  closeExpenseModal: () => void;
+  setEditingExpense: (id: string | null) => void;
+
   addExpense: (expense: Omit<Expense, 'id' | 'date' | 'tripId'>) => void;
+  updateExpense: (id: string, expense: Omit<Expense, 'id' | 'date' | 'tripId'>) => Promise<void>;
   deleteExpense: (id: string) => void;
 }

@@ -5,7 +5,7 @@ import { distributeEqually } from '../utils/calculations';
 import { Button } from './ui/Button';
 import { MemberAvatar } from './MemberAvatar';
 import { formatCurrency } from '../utils/format';
-import { X, Edit2, RotateCcw, CheckCircle2, AlertCircle, Wand2 } from 'lucide-react';
+import { X, Edit2, RotateCcw, CheckCircle2, AlertCircle, Wand2, Trash2 } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -15,7 +15,7 @@ interface Props {
 type SplitMode = 'EQUAL' | 'EXACT';
 
 export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { members, trip, addExpense } = useAppStore();
+  const { members, trip, addExpense, updateExpense, deleteExpense, editingExpenseId, expenses } = useAppStore();
   
   // Local Form State
   const [title, setTitle] = useState('');
@@ -25,25 +25,54 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   
   // Split Logic State
   const [splitMode, setSplitMode] = useState<SplitMode>('EQUAL');
-  const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({}); // ID -> "10.50" (Major units string)
+  const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({}); 
   
   // Validation State
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize/Reset
+  // Initialize/Reset or Load Existing Data
   useEffect(() => {
     if (isOpen) {
-      setTitle('');
-      setAmountStr('');
       setError(null);
-      setSplitMode('EQUAL');
-      setExactAmounts({});
-      // Default payer: first member or none
-      setPaidBy(members.length > 0 ? members[0].id : '');
-      // Default split: everyone
-      setSelectedMembers(members.map(m => m.id));
+      
+      if (editingExpenseId) {
+          // EDIT MODE: Populate fields
+          const expense = expenses.find(e => e.id === editingExpenseId);
+          if (expense) {
+            setTitle(expense.title);
+            setAmountStr((expense.amount / 100).toString());
+            setPaidBy(expense.paidBy);
+            
+            // Determine split mode
+            const mode = expense.splitType === 'EQUAL' ? 'EQUAL' : 'EXACT';
+            setSplitMode(mode);
+            
+            // Set selected members
+            const memberIds = expense.splits.map(s => s.memberId);
+            setSelectedMembers(memberIds);
+
+            // Populate exact amounts map
+            if (mode === 'EXACT') {
+                const amounts: Record<string, string> = {};
+                expense.splits.forEach(s => {
+                    amounts[s.memberId] = (s.amount / 100).toString();
+                });
+                setExactAmounts(amounts);
+            } else {
+                setExactAmounts({});
+            }
+          }
+      } else {
+          // ADD MODE: Default State
+          setTitle('');
+          setAmountStr('');
+          setSplitMode('EQUAL');
+          setExactAmounts({});
+          setPaidBy(members.length > 0 ? members[0].id : '');
+          setSelectedMembers(members.map(m => m.id));
+      }
     }
-  }, [isOpen, members]);
+  }, [isOpen, editingExpenseId, members, expenses]);
 
   // --- Computed Values ---
 
@@ -52,9 +81,8 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   // Calculate stats for Exact Mode
   const assignedAmount = Object.entries(exactAmounts)
     .filter(([id]) => selectedMembers.includes(id))
-    .reduce((sum, [_, val]) => sum + (parseFloat(val) || 0), 0);
+    .reduce((sum, [_, val]) => sum + (parseFloat(val as string) || 0), 0);
     
-  // Floating point safety check (epsilon)
   const remainingAmount = totalAmount - assignedAmount;
   const isBalanced = Math.abs(remainingAmount) < 0.01;
   const isOver = remainingAmount < -0.01;
@@ -65,17 +93,14 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const handleToggleMember = (id: string) => {
     setError(null);
     if (selectedMembers.includes(id)) {
-       // Prevent deselecting everyone (must have at least 1)
        if (selectedMembers.length > 1) {
            setSelectedMembers(prev => prev.filter(m => m !== id));
-           // Remove from exact amounts if deselected
            const newAmounts = { ...exactAmounts };
            delete newAmounts[id];
            setExactAmounts(newAmounts);
        }
     } else {
        setSelectedMembers(prev => [...prev, id]);
-       // If in exact mode, initialize with 0
        if (splitMode === 'EXACT') {
            setExactAmounts(prev => ({ ...prev, [id]: '' }));
        }
@@ -85,7 +110,6 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const handleToggleAll = () => {
     setError(null);
     if (selectedMembers.length === members.length) {
-      // Keep only payer
       const keepId = paidBy || (members[0]?.id);
       if (keepId) setSelectedMembers([keepId]);
     } else {
@@ -94,13 +118,11 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const switchToExactMode = () => {
-    // Pre-calculate equal splits to start
     const amountInCents = Math.round(totalAmount * 100);
     const splits = distributeEqually(amountInCents, selectedMembers);
     
     const newAmounts: Record<string, string> = {};
     splits.forEach(s => {
-        // Convert back to major units for display
         newAmounts[s.memberId] = (s.amount / 100).toFixed(2).replace(/\.00$/, '');
     });
     
@@ -114,7 +136,6 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const handleExactAmountChange = (id: string, val: string) => {
-      // Allow only numbers and one decimal point
       if (/^\d*\.?\d{0,2}$/.test(val)) {
           setExactAmounts(prev => ({ ...prev, [id]: val }));
       }
@@ -123,14 +144,21 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const assignRemainingTo = (id: string) => {
       const currentVal = parseFloat(exactAmounts[id] || '0');
       const newVal = currentVal + remainingAmount;
-      if (newVal < 0) return; // Basic safety
+      if (newVal < 0) return;
       setExactAmounts(prev => ({
           ...prev,
           [id]: newVal.toFixed(2).replace(/\.00$/, '')
       }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleDelete = () => {
+      if (editingExpenseId && confirm("Are you sure you want to delete this expense?")) {
+          deleteExpense(editingExpenseId);
+          onClose();
+      }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -148,13 +176,11 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
         finalSplits = distributeEqually(amountInCents, selectedMembers);
         if (finalSplits.length === 0) { setError("Could not calculate splits"); return; }
     } else {
-        // EXACT MODE VALIDATION
         if (!isBalanced) {
             setError(`Amounts must equal ${trip?.currencySymbol}${totalAmount}`);
             return;
         }
 
-        // Construct splits from manual input
         let checkSum = 0;
         selectedMembers.forEach(id => {
             const val = parseFloat(exactAmounts[id] || '0');
@@ -163,23 +189,27 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
             finalSplits.push({ memberId: id, amount: valCents });
         });
 
-        // Final penny check (rare edge case with float math)
         const diff = amountInCents - checkSum;
         if (diff !== 0 && finalSplits.length > 0) {
-            // Apply penny fix to first member
             finalSplits[0].amount += diff;
         }
     }
 
-    // 3. Submit
+    // 3. Submit (Update or Create)
     try {
-        addExpense({
+        const payload = {
             title: title.trim(),
             amount: amountInCents,
             paidBy: paidBy,
             splitType: splitMode,
             splits: finalSplits
-        });
+        };
+
+        if (editingExpenseId) {
+            await updateExpense(editingExpenseId, payload);
+        } else {
+            addExpense(payload);
+        }
         onClose();
     } catch (err) {
         console.error(err);
@@ -390,7 +420,7 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
                                                 {trip?.currencySymbol}
                                             </span>
                                             <input
-                                                type="number" // Changed to number for mobile keyboard, logic handles string
+                                                type="number" 
                                                 inputMode="decimal"
                                                 value={exactAmounts[m.id] || ''}
                                                 onChange={(e) => handleExactAmountChange(m.id, e.target.value)}
@@ -436,17 +466,34 @@ export const AddExpenseModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     </div>
                 )}
                 
-                <Button 
-                    type="submit" 
-                    fullWidth 
-                    size="lg" 
-                    disabled={splitMode === 'EXACT' && !isBalanced}
-                    className={`shadow-xl shadow-primary/25 ${
-                        splitMode === 'EXACT' && !isBalanced ? 'opacity-50 grayscale' : ''
-                    }`}
-                >
-                    {splitMode === 'EXACT' && !isBalanced ? 'Amounts must match total' : 'Add Expense'}
-                </Button>
+                <div className="flex gap-3">
+                    {/* Delete button only in Edit Mode */}
+                    {editingExpenseId && (
+                        <Button 
+                            type="button" 
+                            variant="danger"
+                            onClick={handleDelete}
+                            className="w-16 flex items-center justify-center shrink-0"
+                        >
+                            <Trash2 size={20} />
+                        </Button>
+                    )}
+
+                    <Button 
+                        type="submit" 
+                        fullWidth 
+                        size="lg" 
+                        disabled={splitMode === 'EXACT' && !isBalanced}
+                        className={`shadow-xl shadow-primary/25 ${
+                            splitMode === 'EXACT' && !isBalanced ? 'opacity-50 grayscale' : ''
+                        }`}
+                    >
+                        {splitMode === 'EXACT' && !isBalanced 
+                            ? 'Amounts must match total' 
+                            : editingExpenseId ? 'Save Changes' : 'Add Expense'
+                        }
+                    </Button>
+                </div>
             </div>
         </form>
       </motion.div>
