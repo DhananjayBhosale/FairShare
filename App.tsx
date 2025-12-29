@@ -12,7 +12,7 @@ import { AddExpenseModal } from './components/AddExpenseModal';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const App: React.FC = () => {
-  const { trip, isLoading, loadTrip, isExpenseModalOpen, openExpenseModal, closeExpenseModal } = useAppStore();
+  const { trip, isLoading, loadTrip, isExpenseModalOpen, openExpenseModal, closeExpenseModal, isCreatingTrip } = useAppStore();
 
   useEffect(() => {
     // Single source of truth loading.
@@ -28,7 +28,8 @@ const App: React.FC = () => {
     );
   }
 
-  if (!trip) {
+  // Show setup if no trip exists OR if user explicitly wants to create a new one
+  if (!trip || isCreatingTrip) {
     return <TripSetup />;
   }
 

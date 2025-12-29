@@ -2,6 +2,7 @@
 
 export interface Member {
   id: string;
+  tripId: string; // Linked to a specific trip
   name: string;
   color: string;
   avatar: string; // Emoji character
@@ -16,6 +17,7 @@ export interface SplitDetail {
 
 export interface Expense {
   id: string;
+  tripId: string; // Linked to a specific trip
   title: string;
   amount: number; // Total amount in minor units
   paidBy: string; // Member ID who paid
@@ -47,18 +49,29 @@ export interface Settlement {
 
 // Store State
 export interface AppState {
-  trip: Trip | null;
-  members: Member[];
-  expenses: Expense[];
+  trips: Trip[]; // List of all available trips
+  trip: Trip | null; // Currently active trip
+  members: Member[]; // Members of the active trip
+  expenses: Expense[]; // Expenses of the active trip
   isLoading: boolean;
   
   // Actions
-  createTrip: (name: string, currency: string) => Promise<void>;
   loadTrip: () => Promise<void>;
+  
+  // Trip Management
+  startTrip: (name: string, currency: string, initialMembers: { name: string, avatar: string, color: string }[]) => Promise<void>;
+  switchTrip: (tripId: string) => Promise<void>;
+  deleteTrip: (tripId: string) => Promise<void>;
+  
+  // Creation Flow
+  isCreatingTrip: boolean;
+  startCreatingTrip: () => void;
+  cancelCreatingTrip: () => void;
+
+  // Member/Expense Actions (Scoped to active trip)
   addMember: (name: string) => void;
   updateMember: (id: string, name: string, color: string) => void;
   removeMember: (id: string) => void;
-  addExpense: (expense: Omit<Expense, 'id' | 'date'>) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'date' | 'tripId'>) => void;
   deleteExpense: (id: string) => void;
-  resetTrip: () => Promise<void>;
 }

@@ -4,7 +4,7 @@ const DB_NAME = 'fairshare_db';
 const DB_VERSION = 1;
 
 interface DBData {
-  trip?: Trip;
+  trip?: Trip[]; // Changed to array
   members: Member[];
   expenses: Expense[];
 }
@@ -22,7 +22,7 @@ export const initDB = (): Promise<IDBDatabase> => {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       
-      // Store single trip object
+      // Store trip objects
       if (!db.objectStoreNames.contains('trip')) {
         db.createObjectStore('trip', { keyPath: 'id' });
       }
@@ -87,7 +87,7 @@ export const loadAllFromDB = async () => {
 
     tx.oncomplete = () => {
       resolve({
-        trip: tripReq.result[0] || undefined,
+        trip: tripReq.result || [], // Return array
         members: membersReq.result || [],
         expenses: expensesReq.result || [],
       });

@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
 import { Button } from '../components/ui/Button';
-import { LogOut, Trash2, Edit, UserPlus, Plus } from 'lucide-react';
+import { LogOut, Trash2, Edit, UserPlus, Plus, Map, Check } from 'lucide-react';
 import { MemberAvatar } from '../components/MemberAvatar';
 import { X } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const Settings: React.FC = () => {
-  const { trip, members, resetTrip, removeMember, addMember } = useAppStore();
+  const { trip, trips, members, deleteTrip, removeMember, addMember, switchTrip, startCreatingTrip } = useAppStore();
   const [newMemberName, setNewMemberName] = useState('');
 
-  const handleEndTrip = async () => {
-    if (confirm("Are you sure you want to delete this trip?")) {
-      await resetTrip();
+  const handleDeleteTrip = async () => {
+    if (confirm("Are you sure you want to delete this trip and all its data?")) {
+      if (trip) await deleteTrip(trip.id);
     }
   };
 
@@ -25,11 +26,47 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="space-y-8 pb-32 pt-4">
-      <h1 className="text-3xl font-extrabold text-white">Manage Trip</h1>
+      <h1 className="text-3xl font-extrabold text-white">Manage</h1>
+
+      {/* Switch Trip Section */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Your Trips</h2>
+            <button 
+                onClick={startCreatingTrip}
+                className="text-xs font-bold text-primary flex items-center gap-1 hover:text-white transition-colors"
+            >
+                <Plus size={14} /> New Trip
+            </button>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 snap-x px-1 -mx-1 no-scrollbar">
+            {trips.map(t => {
+                const isActive = t.id === trip?.id;
+                return (
+                    <button
+                        key={t.id}
+                        onClick={() => !isActive && switchTrip(t.id)}
+                        className={`flex-shrink-0 snap-center w-40 p-4 rounded-2xl border text-left transition-all ${
+                            isActive 
+                            ? 'bg-white/10 border-white/20 shadow-lg' 
+                            : 'bg-white/5 border-transparent opacity-60 hover:opacity-100'
+                        }`}
+                    >
+                        <div className="flex justify-between items-start mb-2">
+                            <Map size={20} className={isActive ? 'text-white' : 'text-slate-500'} />
+                            {isActive && <Check size={16} className="text-emerald-400" />}
+                        </div>
+                        <div className="font-bold text-white truncate">{t.name}</div>
+                        <div className="text-xs text-slate-500">{new Date(t.createdAt).toLocaleDateString()}</div>
+                    </button>
+                )
+            })}
+        </div>
+      </section>
 
       {/* Trip Info */}
       <section className="glass-card p-6 rounded-3xl space-y-4">
-        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Trip Details</h2>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current Trip</h2>
         <div>
           <div className="text-2xl font-bold text-white">{trip?.name}</div>
           <div className="text-sm text-slate-400">
@@ -84,9 +121,9 @@ export const Settings: React.FC = () => {
 
       {/* Danger Zone */}
       <section className="space-y-4 pt-8">
-        <Button variant="danger" fullWidth onClick={handleEndTrip}>
-          <LogOut size={18} className="mr-2 inline" />
-          End Trip & Clear Data
+        <Button variant="danger" fullWidth onClick={handleDeleteTrip}>
+          <Trash2 size={18} className="mr-2 inline" />
+          Delete Trip
         </Button>
       </section>
     </div>

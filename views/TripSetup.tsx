@@ -9,7 +9,7 @@ import { MemberAvatar } from '../components/MemberAvatar';
 type Step = 'TRIP_DETAILS' | 'ADD_MEMBERS';
 
 export const TripSetup: React.FC = () => {
-  const { startTrip } = useAppStore();
+  const { startTrip, trips, cancelCreatingTrip } = useAppStore();
   
   const [step, setStep] = useState<Step>('TRIP_DETAILS');
   const [showSettings, setShowSettings] = useState(false);
@@ -23,6 +23,8 @@ export const TripSetup: React.FC = () => {
   
   // Cycle random avatar for the input
   const [nextAvatarIndex, setNextAvatarIndex] = useState(0);
+
+  const canCancel = trips.length > 0;
 
   const handleAddMember = () => {
     if (!tempName.trim()) return;
@@ -46,12 +48,22 @@ export const TripSetup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#0B0E14]">
       {/* Dynamic Background */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[100px] animate-blob" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/20 rounded-full blur-[100px] animate-blob animation-delay-2000" />
       </div>
+
+      {/* Cancel Button (if creating additional trip) */}
+      {canCancel && (
+          <button 
+            onClick={cancelCreatingTrip}
+            className="absolute top-6 left-6 z-40 p-3 bg-white/5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-all backdrop-blur-md border border-white/10"
+          >
+              <X size={24} />
+          </button>
+      )}
 
       {/* Settings Toggle */}
       <div className="absolute top-6 right-6 z-40">
@@ -87,7 +99,7 @@ export const TripSetup: React.FC = () => {
 
                <div className="space-y-4 w-full">
                  <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 leading-tight">
-                   Let's plan a<br/>new adventure.
+                   {canCancel ? "Another one?" : "Let's plan a\nnew adventure."}
                  </h1>
                  
                  <div className="relative group">
