@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAppStore } from '../store/useAppStore';
 import { Button } from '../components/ui/Button';
 import { AVATARS } from '../constants';
-import { ChevronRight, Plus, Sparkles, Settings, X, ArrowRight } from 'lucide-react';
-import { MemberAvatar } from '../components/MemberAvatar';
+import { Settings, X, ArrowRight, Sparkles, Plus } from 'lucide-react'; // Fixed imports order/usage
 
 type Step = 'TRIP_DETAILS' | 'ADD_MEMBERS';
+
+const FLOATING_ICONS = ['✈️', '💸', '🌍', '🍕', '🎉', '📸', '🥂', '🏝️', '🎸', '🍦'];
 
 export const TripSetup: React.FC = () => {
   const { startTrip, trips, cancelCreatingTrip } = useAppStore();
@@ -53,6 +54,34 @@ export const TripSetup: React.FC = () => {
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/20 rounded-full blur-[100px] animate-blob" />
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-accent/20 rounded-full blur-[100px] animate-blob animation-delay-2000" />
+          
+          {/* Floating Fun Elements */}
+          {FLOATING_ICONS.map((icon, i) => (
+            <motion.div
+                key={i}
+                className="absolute text-5xl opacity-[0.15] filter blur-[1px]"
+                initial={{ 
+                    x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 300), 
+                    y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 600),
+                    rotate: Math.random() * 360,
+                    scale: 0.8
+                }}
+                animate={{ 
+                    y: [null, Math.random() * -100, Math.random() * 100],
+                    x: [null, Math.random() * 50, Math.random() * -50],
+                    rotate: [null, Math.random() * 360],
+                    scale: [0.8, 1.2, 0.8]
+                }}
+                transition={{
+                    duration: 15 + Math.random() * 15,
+                    repeat: Infinity,
+                    repeatType: "mirror",
+                    ease: "easeInOut"
+                }}
+            >
+                {icon}
+            </motion.div>
+          ))}
       </div>
 
       {/* Cancel Button (if creating additional trip) */}
@@ -88,21 +117,26 @@ export const TripSetup: React.FC = () => {
               className="flex flex-col items-center text-center space-y-10"
             >
                <motion.div 
-                 initial={{ y: 20, opacity: 0 }}
-                 animate={{ y: 0, opacity: 1 }}
-                 transition={{ delay: 0.2 }}
+                 initial={{ y: 20, opacity: 0, rotate: -10 }}
+                 animate={{ y: 0, opacity: 1, rotate: 0 }}
+                 transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
                  className="relative"
                >
                  <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
-                 <Sparkles className="relative text-white w-16 h-16" strokeWidth={1.5} />
+                 <Sparkles className="relative text-white w-20 h-20 drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]" strokeWidth={1.5} />
                </motion.div>
 
                <div className="space-y-4 w-full">
-                 <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white to-slate-400 leading-tight">
-                   {canCancel ? "Another one?" : "Let's plan a\nnew adventure."}
+                 <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-400 leading-tight tracking-tight">
+                   {canCancel ? "Another one?" : (
+                     <>
+                        Let's plan a<br/>
+                        <span className="text-primary inline-block transform hover:scale-105 transition-transform cursor-default">new adventure.</span>
+                     </>
+                   )}
                  </h1>
                  
-                 <div className="relative group">
+                 <div className="relative group pt-4">
                     <input
                         type="text"
                         placeholder="Trip Name..."
@@ -119,7 +153,7 @@ export const TripSetup: React.FC = () => {
                   size="lg" 
                   onClick={() => setStep('ADD_MEMBERS')} 
                   disabled={!name.trim()}
-                  className="rounded-full px-10 h-16 text-lg shadow-xl shadow-primary/20"
+                  className="rounded-full px-12 h-16 text-lg shadow-[0_0_30px_rgba(139,92,246,0.3)] hover:shadow-[0_0_50px_rgba(139,92,246,0.5)] transition-shadow"
                 >
                   Start Building Squad <ArrowRight className="ml-2" />
                 </Button>
@@ -141,19 +175,20 @@ export const TripSetup: React.FC = () => {
                </div>
 
                {/* Dynamic Grid of Members */}
-               <div className="flex-1 overflow-y-auto min-h-[200px] content-start p-4">
+               <div className="flex-1 overflow-y-auto min-h-[200px] content-start p-4 custom-scrollbar">
                  <div className="flex flex-wrap gap-4 justify-center">
                     <AnimatePresence mode="popLayout">
                         {members.map((m, i) => (
                             <motion.div
                             key={`${m.name}-${i}`}
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
+                            initial={{ scale: 0, rotate: -20 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            exit={{ scale: 0, rotate: 20 }}
                             layout
                             className="flex flex-col items-center gap-2"
                             >
-                                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-3xl shadow-lg backdrop-blur-sm">
+                                <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-3xl shadow-lg backdrop-blur-sm relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                                     {m.avatar}
                                 </div>
                                 <span className="font-bold text-sm text-white">{m.name}</span>
@@ -172,7 +207,7 @@ export const TripSetup: React.FC = () => {
 
                {/* Input Area */}
                <div className="mt-auto space-y-4 pt-6">
-                 <div className="glass-card p-2 pl-6 rounded-full flex items-center gap-4 border border-white/20 shadow-2xl">
+                 <div className="glass-card p-2 pl-6 rounded-full flex items-center gap-4 border border-white/20 shadow-2xl focus-within:border-primary/50 transition-colors">
                     <input
                       type="text"
                       placeholder="Name..."
@@ -184,7 +219,7 @@ export const TripSetup: React.FC = () => {
                     <button 
                       onClick={handleAddMember}
                       disabled={!tempName.trim()}
-                      className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center disabled:opacity-50 disabled:scale-90 hover:scale-110 active:scale-90 transition-all"
+                      className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center disabled:opacity-50 disabled:scale-90 hover:scale-110 active:scale-90 transition-all shadow-lg"
                     >
                       <Plus size={24} strokeWidth={3} />
                     </button>
@@ -195,7 +230,7 @@ export const TripSetup: React.FC = () => {
                         Back
                     </Button>
                     <Button 
-                        className="flex-[2]" 
+                        className="flex-[2] shadow-[0_0_20px_rgba(139,92,246,0.2)]" 
                         onClick={handleFinish}
                         disabled={members.length < 1} // Allow single player for testing
                     >
