@@ -130,8 +130,8 @@ export const TripSetup: React.FC = () => {
                  <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-400 leading-tight tracking-tight">
                    {canCancel ? "Another one?" : (
                      <>
-                        Let's plan a<br/>
-                        <span className="text-primary inline-block transform hover:scale-105 transition-transform cursor-default">new adventure.</span>
+                        Name your<br/>
+                        <span className="text-primary inline-block transform hover:scale-105 transition-transform cursor-default">adventure.</span>
                      </>
                    )}
                  </h1>
